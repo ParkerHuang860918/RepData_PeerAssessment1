@@ -1,1 +1,116 @@
 
+PA1_template
+Parker
+2017-11-13
+Introduction
+This project needs us to load a data set, performs some basic analysis, and produces some charts by following five steps in terms of R markdown document
+1. Loading and preprocessing the data
+After set up working directory into the path where activity dataset is saved
+if (! exists("activity")){
+    activity<- read.csv("activity.csv")
+}
+head(activity)
+##   steps       date interval
+## 1    NA 2012-10-01        0
+## 2    NA 2012-10-01        5
+## 3    NA 2012-10-01       10
+## 4    NA 2012-10-01       15
+## 5    NA 2012-10-01       20
+## 6    NA 2012-10-01       25
+data <- aggregate(steps ~ date, data=activity, sum, na.rm = TRUE)
+head(data)
+##         date steps
+## 1 2012-10-02   126
+## 2 2012-10-03 11352
+## 3 2012-10-04 12116
+## 4 2012-10-05 13294
+## 5 2012-10-06 15420
+## 6 2012-10-07 11015
+hist(data$steps, breaks=40, main="Total Steps per Day", xlab="Steps", ylab="Frequency", col = 3)
+ 
+In conclusion, in terms of histgram, it is roughly seen that median number is around 1000.
+2. What is mean total number of steps taken per day?
+data_mean <- mean(data$steps, na.rm=TRUE)
+data_median <- median(data$steps, na.rm=TRUE)
+print(paste("The mean steps per day is: ", data_mean))
+## [1] "The mean steps per day is:  10766.1886792453"
+print(paste("The median steps per day is: ", data_median))
+## [1] "The median steps per day is:  10765"
+3. What is the average daily activity pattern?
+##### 1. Calculating Avg. Steps:
+library(dplyr)
+## 
+## Attaching package: 'dplyr'
+## The following objects are masked from 'package:stats':
+## 
+##     filter, lag
+## The following objects are masked from 'package:base':
+## 
+##     intersect, setdiff, setequal, union
+library(ggplot2)
+Interval<- activity%>%
+        group_by(interval)%>%
+        filter(!is.na(steps))%>%
+        summarise(avg_steps=mean(steps, na.rm=TRUE))
+head(Interval)
+## # A tibble: 6 × 2
+##   interval avg_steps
+##      <int>     <dbl>
+## 1        0 1.7169811
+## 2        5 0.3396226
+## 3       10 0.1320755
+## 4       15 0.1509434
+## 5       20 0.0754717
+## 6       25 2.0943396
+##### 1.a Plotting Avg. Steps:
+ggplot(Interval, aes(x =interval , y=avg_steps)) +
+        geom_line(color="purple", size=2) +
+        labs(title = "Avergate Daily Steps for each interval", x = "Interval", y = "Average Steps per day")
+ 
+##### 2. Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+maxsteps<-Interval[which.max(Interval$avg_steps),]
+maxsteps
+## # A tibble: 1 × 2
+##   interval avg_steps
+##      <int>     <dbl>
+## 1      835  206.1698
+print(paste("The maximum number of steps in a five minute interval was: ", maxsteps$avg_steps))
+## [1] "The maximum number of steps in a five minute interval was:  206.169811320755"
+4. Imputing missing values
+#total missing data
+
+missingdata <- sum(is.na(activity$steps))
+print(paste("There are", missingdata, "missing data points."))
+## [1] "There are 2304 missing data points."
+# Replacing NA value with mean value
+
+activity_1 <- activity
+activity_1$steps[is.na(activity_1$steps)] <- mean(activity$steps, na.rm=TRUE)
+activity_2 <- aggregate(steps ~ date, data= activity_1, sum, na.rm=TRUE)
+hist(activity_2$steps, breaks=40, main="Total Steps per Day \n Adjusted Data",
+     xlab="Steps", ylab="Frequency", col='red')
+ 
+print(paste("median for adjusted data is ", median(activity_2$steps)))
+## [1] "median for adjusted data is  10766.1886792453"
+print(paste("mean for adjusted data is ", mean(activity_2$steps)))
+## [1] "mean for adjusted data is  10766.1886792453"
+In conclusion: the impact of imputing missing data with the average number of steps in the same 5-min interval is that both the mean and the median are same : 10766.19
+5. Are there differences in activity patterns between weekdays and weekends?
+activity_1$date <- as.Date(activity_1$date)
+activity_1$day_name <- weekdays(activity_1$date)
+table(activity_1$day_name)
+## 
+## 星期二 星期六 星期日 星期三 星期四 星期五 星期一 
+##   2592   2304   2304   2592   2592   2592   2592
+activity_1$week_ind <- as.factor(ifelse(activity_1$day_name == "星期六" | activity_1$day_name == "星期日", "weekend", "weekday"))
+library(lattice)
+plot_data <- aggregate(steps ~ interval + week_ind, activity_1, mean)
+xyplot(steps ~ interval | (week_ind), data=plot_data, aspect=1/2, type="l")
+ 
+plot_data_weekday<-subset(plot_data, week_ind == "weekday")
+plot_data_weekend<-subset(plot_data, week_ind == "weekend")
+
+print(paste("max step in weekday is ", plot_data_weekday[which.max(plot_data_weekday$steps), ]$steps, "in interval", plot_data[which.max(plot_data_weekday$steps), ]$interval))
+## [1] "max step in weekday is  207.873235499651 in interval 835"
+print(paste("max step in weekends is ", plot_data_weekend[which.max(plot_data_weekend$steps), ]$steps, "in interval", plot_data[which.max(plot_data_weekend$steps), ]$interval))
+## [1] "max step in weekends is  157.797824947589 in interval 915"
